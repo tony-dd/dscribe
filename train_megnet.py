@@ -52,10 +52,12 @@ with tf.device('/gpu:0'):
             G_O) * O_num
         targets.append(pp)
 
-    train_structures = structures[:int(len(structures) * 0.9)]
-    vali_structures = structures[int(len(structures) * 0.9):]
-    train_targets = targets[:int(len(structures) * 0.9)]
-    vali_targets = targets[int(len(structures) * 0.9):]
+    train_structures = structures[:int(len(structures) * 0.8)]
+    vali_structures = structures[int(len(structures) * 0.8):int(len(structures) * 0.9)]
+    train_targets = targets[:int(len(structures) * 0.8)]
+    vali_targets = targets[int(len(structures) * 0.8):int(len(structures) * 0.9)]
+    test_structures = structures[int(len(structures) * 0.9):]
+    test_targets = targets[int(len(structures) * 0.9):]
 
     gc = CrystalGraph(bond_converter=GaussianDistance(
         np.linspace(0, 5, 100), 0.5), cutoff=4)
@@ -64,25 +66,24 @@ with tf.device('/gpu:0'):
     INTENSIVE = False
     scaler = StandardScaler.from_training_data(train_structures, train_targets, is_intensive=INTENSIVE)
     model.target_scaler = scaler
-
     model.train(train_structures, train_targets, vali_structures, vali_targets, epochs=2000, verbose=2)
 
 
-    def mae_loss(n1, n2):
-        err, total_err = 0, 0
-        for i in range(len(n1)):
-            err = abs(n1[i] - n2[i])
-            total_err += err
-        return total_err / len(n1)
+def mae_loss(n1, n2):
+    err, total_err = 0, 0
+    for i in range(len(n1)):
+        err = abs(n1[i] - n2[i])
+        total_err += err
+    return total_err / len(n1)
 
 
-    predicted_tests = []
-    for i in vali_structures_structures:
-        predicted_tests.append(model.predict_structure(i).ravel()[0])
+predicted_tests = []
+for i in test_structures:
+    predicted_tests.append(model.predict_structure(i).ravel()[0])
 
-    print(predicted_tests[:10])
-    print(test_targets[:10])
+print(predicted_tests[:10])
+print(test_targets[:10])
 
-    print('mae:', mae_loss(predicted_tests, vali_targets))
+print('mae:', mae_loss(predicted_tests, vali_targets))
 
-    model.save_model('test.hdf5')
+model.save_model('test.hdf5')
